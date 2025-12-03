@@ -154,31 +154,30 @@ export default function CaptureScreen() {
   return (
     <View style={styles.container}>
       <CameraView 
-        style={styles.camera} 
+        style={StyleSheet.absoluteFillObject} 
         facing="back" 
         ref={cameraRef}
         animateShutter={false}
-      >
-        <View style={styles.overlay}>
-          <View style={styles.statusPanel}>
-            <Text style={styles.statusText}>
-              Status: {isDetecting ? "🟢 DETECTING" : "🔴 PAUSED"}
-            </Text>
-            <Text style={styles.resultText}>
-              {lastResult}
-            </Text>
-          </View>
-          
-          <TouchableOpacity 
-            style={[styles.button, isDetecting ? styles.buttonStop : styles.buttonStart]}
-            onPress={toggleDetection}
-          >
-            <Text style={styles.buttonText}>
-              {isDetecting ? "STOP" : "START"}
-            </Text>
-          </TouchableOpacity>
+      />
+      <View style={styles.overlay}>
+        <View style={styles.statusPanel}>
+          <Text style={styles.statusText}>
+            Status: {isDetecting ? "🟢 DETECTING" : "🔴 PAUSED"}
+          </Text>
+          <Text style={styles.resultText}>
+            {lastResult}
+          </Text>
         </View>
-      </CameraView>
+        
+        <TouchableOpacity 
+          style={[styles.button, isDetecting ? styles.buttonStop : styles.buttonStart]}
+          onPress={toggleDetection}
+        >
+          <Text style={styles.buttonText}>
+            {isDetecting ? "STOP" : "START"}
+          </Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
