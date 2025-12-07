@@ -1,57 +1,56 @@
-import { StyleSheet, TouchableOpacity, Button, Alert } from 'react-native';
-import { Text, View } from '@/components/Themed';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
+import { Button, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { db } from '@/lib/firebase';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 
-// Configuration
+// --- Roboflow Configuration ---
 const ROBOFLOW_MODEL = "billiard-balls-kjqyt-espxp/1";
 const ROBOFLOW_API_KEY = "MYV5aBkAt7dqZz1fASwR";
-const DETECTION_INTERVAL_MS = 2000; // 2 seconds to stay within free tier limits
+// ------------------------------
 
 export default function CaptureScreen() {
   const [permission, requestPermission] = useCameraPermissions();
-  const [isDetecting, setIsDetecting] = useState(false);
-  const [lastResult, setLastResult] = useState<string>("No detection yet");
-  const [detectedBalls, setDetectedBalls] = useState<number[]>([]);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [detectedBalls, setDetectedBalls] = useState<string>('No detections yet.');
   const cameraRef = useRef<CameraView>(null);
-  const intervalRef = useRef<any>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Permissions check
   if (!permission) {
-    return <View style={styles.container}><Text>Requesting permissions...</Text></View>;
+    // Camera permissions are still loading.
+    return <View />;
   }
+
   if (!permission.granted) {
+    // Camera permissions are not granted yet.
     return (
       <View style={styles.container}>
-        <Text style={styles.text}>No access to camera</Text>
-        <Button onPress={requestPermission} title="Grant Permission" />
+        <Text style={{ textAlign: 'center' }}>We need your permission to show the camera</Text>
+        <Button onPress={requestPermission} title="grant permission" />
       </View>
     );
   }
 
-  const toggleDetection = () => {
-    if (isDetecting) {
-      stopDetection();
+  const toggleStreaming = () => {
+    if (isStreaming) {
+      stopStreaming();
     } else {
-      startDetection();
+      startStreaming();
     }
   };
 
-  const startDetection = () => {
-    setIsDetecting(true);
+  const startStreaming = () => {
+    setIsStreaming(true);
     // Immediate first run
     runDetectionCycle();
     // Start interval
-    intervalRef.current = setInterval(runDetectionCycle, DETECTION_INTERVAL_MS);
+    intervalRef.current = setInterval(runDetectionCycle, 2000);
   };
 
-  const stopDetection = () => {
-    setIsDetecting(false);
+  const stopStreaming = () => {
+    setIsStreaming(false);
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
-      intervalRef.current = null;
     }
   };
 
@@ -59,25 +58,17 @@ export default function CaptureScreen() {
     if (!cameraRef.current) return;
 
     try {
-      // 1. Take picture
-      // quality 0.5 and skipping creating a file can speed things up, but base64 is needed
       const photo = await cameraRef.current.takePictureAsync({
         quality: 0.5,
         base64: true,
-        skipProcessing: true, // skip android processing for speed
+        skipProcessing: true,
       });
 
-      if (!photo || !photo.base64) {
-        console.log("Failed to take photo or no base64");
-        return;
+      if (photo?.base64) {
+        await detectBalls(photo.base64);
       }
-
-      // 2. Send to Roboflow
-      await detectBalls(photo.base64);
-
     } catch (error) {
       console.error("Detection cycle error:", error);
-      setLastResult(`Error: ${error}`);
     }
   };
 
@@ -87,9 +78,7 @@ export default function CaptureScreen() {
         `https://detect.roboflow.com/${ROBOFLOW_MODEL}?api_key=${ROBOFLOW_API_KEY}`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
           body: base64Image,
         }
       );
@@ -99,25 +88,21 @@ export default function CaptureScreen() {
       }
 
       const data = await response.json();
-      processPredictions(data.predictions || []);
+      await processPredictions(data.predictions || []);
 
     } catch (error) {
       console.error("API Request failed:", error);
     }
   };
 
-  const processPredictions = (predictions: any[]) => {
+  const processPredictions = async (predictions: any[]) => {
     const balls = new Set<number>();
     
     predictions.forEach((pred: any) => {
       if (pred.confidence < 0.5) return;
-
       const className = pred.class.toLowerCase();
-      
-      // Ignore cue ball for now
       if (className.includes("cue") || className.includes("white")) return;
 
-      // Extract number
       const match = className.match(/(\d+)/);
       if (match) {
         const num = parseInt(match[1]);
@@ -128,56 +113,38 @@ export default function CaptureScreen() {
     });
 
     const sortedBalls = Array.from(balls).sort((a, b) => a - b);
-    setDetectedBalls(sortedBalls);
-    setLastResult(`Found: ${sortedBalls.join(', ')}`);
+    setDetectedBalls(`Detected: ${sortedBalls.join(', ')}`);
     
     // Sync to Firebase
-    syncToFirebase(sortedBalls);
+    await syncToFirebase(sortedBalls);
   };
 
-  const syncToFirebase = async (detectedBalls: number[]) => {
+  const syncToFirebase = async (balls: number[]) => {
     try {
-      // Use a single document ID "current" to always update the latest detection
       const detectionRef = doc(db, 'ball_detections', 'current');
       await setDoc(detectionRef, {
-        detectedBalls: detectedBalls,
+        detectedBalls: balls,
         timestamp: serverTimestamp(),
         updatedAt: new Date().toISOString(),
       }, { merge: true });
-      console.log('✅ Synced to Firebase:', detectedBalls);
+      console.log('✅ Synced to Firebase:', balls);
     } catch (error) {
       console.error('❌ Firebase sync error:', error);
-      setLastResult(`Firebase Error: ${error}`);
     }
   };
 
   return (
     <View style={styles.container}>
-      <CameraView 
-        style={StyleSheet.absoluteFillObject} 
-        facing="back" 
-        ref={cameraRef}
-        animateShutter={false}
-      />
-      <View style={styles.overlay}>
-        <View style={styles.statusPanel}>
-          <Text style={styles.statusText}>
-            Status: {isDetecting ? "🟢 DETECTING" : "🔴 PAUSED"}
-          </Text>
-          <Text style={styles.resultText}>
-            {lastResult}
-          </Text>
+      <CameraView style={styles.camera} facing='back' ref={cameraRef}>
+        <View style={styles.detectionContainer}>
+          <Text style={styles.detectionText}>{detectedBalls}</Text>
         </View>
-        
-        <TouchableOpacity 
-          style={[styles.button, isDetecting ? styles.buttonStop : styles.buttonStart]}
-          onPress={toggleDetection}
-        >
-          <Text style={styles.buttonText}>
-            {isDetecting ? "STOP" : "START"}
-          </Text>
-        </TouchableOpacity>
-      </View>
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity style={styles.button} onPress={toggleStreaming}>
+            <Text style={styles.text}>{isStreaming ? 'Stop' : 'Start'}</Text>
+          </TouchableOpacity>
+        </View>
+      </CameraView>
     </View>
   );
 }
@@ -187,49 +154,40 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
   },
-  text: {
-    textAlign: 'center',
-  },
   camera: {
     flex: 1,
   },
-  overlay: {
-    flex: 1,
-    backgroundColor: 'transparent',
-    justifyContent: 'flex-end',
-    padding: 20,
+  detectionContainer: {
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    right: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    padding: 10,
+    borderRadius: 5,
   },
-  statusPanel: {
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 20,
-  },
-  statusText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 5,
-  },
-  resultText: {
-    color: '#00FF00',
-    fontSize: 14,
-    fontFamily: 'monospace',
-  },
-  button: {
-    padding: 20,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  buttonStart: {
-    backgroundColor: '#2196F3',
-  },
-  buttonStop: {
-    backgroundColor: '#F44336',
-  },
-  buttonText: {
+  detectionText: {
     color: 'white',
     fontSize: 18,
+    textAlign: 'center',
+  },
+  buttonContainer: {
+    position: 'absolute',
+    bottom: 50,
+    width: '100%',
+    alignItems: 'center',
+  },
+  button: {
+    backgroundColor: 'rgba(255, 0, 0, 0.5)',
+    borderRadius: 50,
+    width: 80,
+    height: 80,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  text: {
+    fontSize: 16,
     fontWeight: 'bold',
+    color: 'white',
   },
 });
