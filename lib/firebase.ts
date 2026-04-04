@@ -4,12 +4,12 @@ import { getFirestore, initializeFirestore, memoryLocalCache } from "firebase/fi
 
 // Your Firebase configuration for Expo app
 const firebaseConfig = {
-  apiKey: "AIzaSyBvqvuSC9Ta6zIhdLIxOJmGvJfZiZxLUl8",
-  authDomain: "overlayapp-cb8b5.firebaseapp.com",
-  projectId: "overlayapp-cb8b5",
-  storageBucket: "overlayapp-cb8b5.firebasestorage.app",
-  messagingSenderId: "273980807792",
-  appId: "1:273980807792:web:54c13fc0d6585c5aa8f2b5",
+  apiKey: "AIzaSyB5Mpei187CTg-ILaMuFev8b4nxTfqR-hI",
+  authDomain: "barako-tournament.firebaseapp.com",
+  projectId: "barako-tournament",
+  storageBucket: "barako-tournament.firebasestorage.app",
+  messagingSenderId: "686748232951",
+  appId: "1:686748232951:web:23b88cbc413dabf4ddf7f2",
 };
 
 // Initialize Firebase
