@@ -10,12 +10,13 @@
     "preview": {
       "distribution": "internal",
       "ios": {
-        "simulator": false
+        "simulator": false,
+        "image": "sdk-54"
       }
     },
     "production": {
       "ios": {
-        "image": "sdk-53"
+        "image": "sdk-54"
       }
     }
   },

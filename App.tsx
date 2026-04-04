@@ -14,7 +14,7 @@ export default function App() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [detectedBalls, setDetectedBalls] = useState<string>('No detections yet.');
   const cameraRef = useRef<CameraView>(null);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   if (!permission) {
     return <View />;
