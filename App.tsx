@@ -2,6 +2,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useState, useRef } from 'react';
 import { Button, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { db } from './lib/firebase';
+import { CAPTURE_JPEG_QUALITY, DETECTION_INTERVAL_MS } from './constants/detection';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 // --- Roboflow Configuration ---
@@ -40,7 +41,7 @@ export default function App() {
   const startStreaming = () => {
     setIsStreaming(true);
     runDetectionCycle();
-    intervalRef.current = setInterval(runDetectionCycle, 2000);
+    intervalRef.current = setInterval(runDetectionCycle, DETECTION_INTERVAL_MS);
   };
 
   const stopStreaming = () => {
@@ -54,9 +55,10 @@ export default function App() {
     if (!cameraRef.current) return;
     try {
       const photo = await cameraRef.current.takePictureAsync({
-        quality: 0.5,
+        quality: CAPTURE_JPEG_QUALITY,
         base64: true,
         skipProcessing: true,
+        shutterSound: false,
       });
       if (photo?.base64) {
         await detectBalls(photo.base64);

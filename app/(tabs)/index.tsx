@@ -1,4 +1,5 @@
 import { Text, View } from '@/components/Themed';
+import { CAPTURE_JPEG_QUALITY, DETECTION_INTERVAL_MS } from '@/constants/detection';
 import { db } from '@/lib/firebase';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
@@ -8,7 +9,6 @@ import { Button, StyleSheet, TouchableOpacity } from 'react-native';
 // Configuration
 const ROBOFLOW_MODEL = "billiard-balls-kjqyt-espxp/1";
 const ROBOFLOW_API_KEY = "MYV5aBkAt7dqZz1fASwR";
-const DETECTION_INTERVAL_MS = 4000; // 4 seconds
 
 export default function CaptureScreen() {
   const [permission, requestPermission] = useCameraPermissions();
@@ -62,9 +62,10 @@ export default function CaptureScreen() {
       // 1. Take picture
       // quality 0.5 and skipping creating a file can speed things up, but base64 is needed
       const photo = await cameraRef.current.takePictureAsync({
-        quality: 0.5,
+        quality: CAPTURE_JPEG_QUALITY,
         base64: true,
-        skipProcessing: true, // skip android processing for speed
+        skipProcessing: true,
+        shutterSound: false,
       });
 
       if (!photo || !photo.base64) {

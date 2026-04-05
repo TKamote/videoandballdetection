@@ -5,17 +5,28 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      }
     },
     "preview": {
       "distribution": "internal",
       "ios": {
         "simulator": false,
         "image": "sdk-54"
+      },
+      "android": {
+        "buildType": "apk",
+        "image": "sdk-54"
       }
     },
     "production": {
       "ios": {
+        "image": "sdk-54"
+      },
+      "android": {
+        "buildType": "app-bundle",
         "image": "sdk-54"
       }
     }
