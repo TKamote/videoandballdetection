@@ -37,7 +37,6 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      "expo-router",
       [
         "expo-camera",
         {
@@ -47,11 +46,7 @@
       ],
       "./plugins/withFollyHeaderPaths.js"
     ],
-    "experiments": {
-      "typedRoutes": true
-    },
     "extra": {
-      "router": {},
       "eas": {
         "projectId": "55774ca5-a188-462e-9453-93c7731d0334"
       }

@@ -11,11 +11,9 @@
     "build:android:preview": "eas build --platform android --profile preview"
   },
   "dependencies": {
-    "expo": "~54.0.26",
+    "expo": "~54.0.35",
     "expo-camera": "~17.0.9",
-    "expo-router": "^56.2.9",
     "expo-status-bar": "~3.0.8",
-    "expo-web-browser": "^56.0.5",
     "firebase": "^10.8.0",
     "react": "19.1.0",
     "react-native": "0.81.5"
